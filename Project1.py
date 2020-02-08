@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
 #Variables
-H0= 4.55**10**-17#Hubble constant needs to be in s^-1
+H0= 1/13.8e9#Hubble constant needs to be in s^-1
 iMISM=10**12 #Iniital mass of ISM
 #Star Class
 class Star():
@@ -53,12 +53,13 @@ class Star():
 				return sum([0.3,0.3,0.3,0.3])# returning masses of elemens given to ISM  [C,N,O,Fe]
 
 #Functions
-LookBack= lambda z: (1-(1+z)**-(-(3/2)))*(2/(3*H0)) # creating fucntion to convert redshift z to look back time
+LookBack= lambda z: (2/(3*H0))*(1-(1/(1+z)**(3/2))) # creating fucntion to convert redshift z to look back time
 
 
 #time array
-Z=np.linspace(12,0,1000) #creating array of reshifts staring at z=12 and going to 0 with 1000 elements
+Z=np.linspace(0,1,1000) #creating array of reshifts staring at z=12 and going to 0 with 1000 elements
 Time=LookBack(Z) #convering redshifts to lookback times using funciton amde above
+#print(Time)
 #IMF
 def IMF():
 	Masses=[]
@@ -74,7 +75,7 @@ def IMF():
 MassArray=IMF() #Getting mass array from above function 
 plt.hist(MassArray)
 plt.yscale('log')
-plt.show()
+plt.savefig('InitalMassFunction.png')
 '''
 M=Table()
 M["Masses"]=MassArray
@@ -90,13 +91,13 @@ MSTARS=[] #cumluative mass array of Stars
 for t in Time: # running the time
 	tMSTARS=0 #setting the timestep mass of stars to 0
 	for s in Galaxy: # running loop over all stars in galaxy
-		temp=0 # initaling temp for ISM to 0 if star doesnt die or wind 
-		if s.TMS*1.1>(t): #case for stars that are dead
+		temp=0 # initaling temp for ISM to 0 if star doesnt die or wind
+		if s.TMS*1.1<t: #case for stars that are dead
 			if s.Dead==False:
 				temp=s.Kill() # killing stars and getting contrubition to ISM
 			if s.Blown==False:
 				temp+=s.Wind()
-		if s.TMS>t:
+		if s.TMS<t and s.Blown==False:
 			temp=s.Wind() # accounting for stars winds' contribtion to ISM
 		cMISM+=temp #adding contrubuted masses to ism:
 		tMSTARS+=s.mass # adding mass of stars
@@ -109,4 +110,10 @@ T['z']=Z
 T['Time']=Time
 T['ISM']=MISM
 T['Stars']=MSTARS
-T.write("Output.csv")
+T.write("Output2.csv")
+plt.clf()
+plt.plot(T["Time"],T['ISM'],label='ISM')
+plt.savefig('ISMvTime.png',dpi=300)
+plt.clf()
+plt.plot(T["Time"],T['Stars'],label='Stars')
+plt.savefig('StarsvTime.png',dpi=300)
