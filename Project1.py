@@ -24,21 +24,20 @@ class Star():
 	def Wind(self): # setting up wind procedure for stars past MS
 		if self.Blown==True: #checking for wind 
 			print("Star's wind already accounted for") # rpinting error message
-			return 0 # retunring 0 mass to ism
+			return 0,0,0,0 # retunring 0 mass to ism
 		else:
-			if self.mass<=8: # for stars less than 8 solar masses
+			if self.mass>=3: # for stars greater than or equal to 3 solar masses
 				self.Blown==True
-				return 0.05*self.mass
-			elif self.mass>=3: # for stars greater than or equal to 8 solar masses
-				self.Blown==True
-				return 0.05*self.mass
+				winda=0.015*self.mass
+				windb=0.01*self.mass
+				return winda,winda,windb,0.00
 			else:
-				return 0
+				return 0,0,0,0
 
 	def Kill(self): # setting up Kill funciton
 		if self.Dead==True: # checking if star has not already been killed
 			print("Star already Dead ", self.mass) # Printing warning
-			return 0 # retuening 0 mass to ism
+			return 0,0,0,0 # retuening 0 mass to ism
 		else:
 			if self.mass>8: # for massive stars
 				self.dead=True #setting the dead atribute to true
@@ -46,11 +45,11 @@ class Star():
 					self.mass=1.4 # setting mass for reminent
 				else:
 					self.mass=3.0 # setting mass of remeninat for very massive stars.
-				return sum([0.1,0.1,0.1,0.3]) # returning masses of elemens given to ISM  [C,N,O,Fe]
+				return 0.1,0.1,0.1,0.3 # returning masses of elemens given to ISM  [C,N,O,Fe]
 			elif self.mass<=8: # for non massive stars
 				self.dead=True# setting dead to True
 				self.mass=0
-				return sum([0.3,0.3,0.3,0.3])# returning masses of elemens given to ISM  [C,N,O,Fe]
+				return 0.3,0.3,0.3,0.3# returning masses of elemens given to ISM  [C,N,O,Fe]
 
 #Functions
 LookBack= lambda z: (2/(3*H0))*(1-(1/(1+z)**(3/2))) # creating fucntion to convert redshift z to look back time
@@ -88,19 +87,42 @@ for i in MassArray: #populating galazy with stars from IMF
 MISM=[] #mass arrawy over time of the ISM
 cMISM=iMISM # current ISM mass set to inital mass of ISM for t=0
 MSTARS=[] #cumluative mass array of Stars
+C=[]
+N=[]
+O=[]
+Fe=[]
+ctempc=0
+ctempn=0
+ctempo=0
+ctempfe=0
 for t in Time: # running the time
 	tMSTARS=0 #setting the timestep mass of stars to 0
 	for s in Galaxy: # running loop over all stars in galaxy
-		temp=0 # initaling temp for ISM to 0 if star doesnt die or wind
-		if s.TMS*1.1<t: #case for stars that are dead
+		tempc=0 
+		tempn=0 
+		tempo=0 
+		tempfe=0 # initaling temp for ISM to 0 if star doesnt die or wind
+		if s.TMS*1.1>t: #case for stars that are dead
 			if s.Dead==False:
-				temp=s.Kill() # killing stars and getting contrubition to ISM
+				tempc1,tempn1,tempo1,tempfe1=s.Kill() # killing stars and getting contrubition to ISM
 			if s.Blown==False:
-				temp+=s.Wind()
-		if s.TMS<t and s.Blown==False:
-			temp=s.Wind() # accounting for stars winds' contribtion to ISM
-		cMISM+=temp #adding contrubuted masses to ism:
+				tempc2,tempn2,tempo2,tempfe2=s.Wind()
+			tempc=tempc1+tempc2
+			tempn=tempn1+tempn2
+			tempo=tempo1+tempo2
+			tempfe=tempfe1+tempfe2
+		elif s.TMS>t and s.Blown==False:
+			(tempc,tempn,tempo,tempfe)==s.Wind() # accounting for stars winds' contribtion to ISM
+		cMISM+=sum([tempc,tempn,tempo,tempfe]) #adding contrubuted masses to ism:
+		ctempc+=tempc
+		ctempn+=tempn
+		ctempo+=tempo
+		ctempfe+=tempfe
 		tMSTARS+=s.mass # adding mass of stars
+	C.append(ctempc)
+	N.append(ctempn)
+	O.append(ctempo)
+	Fe.append(ctempfe)
 	MISM.append(cMISM)# appedning ISM contribitions time steps
 	MSTARS.append(tMSTARS) #appedning to mass of stars for time steps
 	spot=np.where(Time==t)
@@ -110,7 +132,11 @@ T['z']=Z
 T['Time']=Time
 T['ISM']=MISM
 T['Stars']=MSTARS
-T.write("Output2.csv")
+T['C']=C
+T['N']=N
+T['O']=O
+T['Fe']=Fe
+T.write("OutputBig.csv")
 plt.clf()
 plt.plot(T["Time"],T['ISM'],label='ISM')
 plt.savefig('ISMvTime.png',dpi=300)
