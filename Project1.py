@@ -143,3 +143,14 @@ plt.savefig('ISMvTime.png',dpi=300)
 plt.clf()
 plt.plot(T["Time"],T['Stars'],label='Stars')
 plt.savefig('StarsvTime.png',dpi=300)
+
+endmass=[]
+for s in Galaxy:
+	endmass.append(s.mass)
+M=Table()
+M['StartMass']=MassArray
+M['EndMass']=endmass
+M.write('Masses.csv')
+plt.clf()
+plt.hist(np.abs(MassArray-endmass))
+plt.savefig('MassDiff.png')
