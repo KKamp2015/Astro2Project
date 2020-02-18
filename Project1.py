@@ -12,11 +12,12 @@ class Star():
 	------
 
 	'''
-	def __init__(self, Mass): # initaionliing the class with mass
+	def __init__(self, Mass,weight): # initaionliing the class with mass
 		self.mass=Mass #giving star class atribute mass
 		self.calc_rest() # profoming calc_rest fucntion definded below
 		self.Dead=False # Giving star atribute dead and initalizing it to false i.e. star is alive
 		self.Blown=False
+		self.Weight=weight
 	
 	def calc_rest(self): #defining calc_rest 
 		self.TMS=10**10 *(self.mass)**(-3.5) # calculating the time on the main sequnce 
@@ -28,8 +29,8 @@ class Star():
 		else:
 			if self.mass>=3: # for stars greater than or equal to 3 solar masses
 				self.Blown==True
-				winda=0.015*self.mass
-				windb=0.01*self.mass
+				winda=0.015*self.mass*self.Weight
+				windb=0.01*self.mass*self.Weight
 				return winda,winda,windb,0.00
 			else:
 				return 0,0,0,0
@@ -45,11 +46,11 @@ class Star():
 					self.mass=1.4 # setting mass for reminent
 				else:
 					self.mass=3.0 # setting mass of remeninat for very massive stars.
-				return 0.1,0.1,0.1,0.3 # returning masses of elemens given to ISM  [C,N,O,Fe]
+				return 0.1*self.Weight,0.1*self.Weight,0.1*self.Weight,0.3*self.Weight # returning masses of elemens given to ISM  [C,N,O,Fe]
 			elif self.mass<=8: # for non massive stars
 				self.dead=True# setting dead to True
 				self.mass=0
-				return 0.3,0.3,0.3,0.3# returning masses of elemens given to ISM  [C,N,O,Fe]
+				return 0.3*self.Weight,0.3*self.Weight,0.3*self.Weight,0.3*self.Weight# returning masses of elemens given to ISM  [C,N,O,Fe]
 
 #Functions
 LookBack= lambda z: (2/(3*H0))*(1-(1/(1+z)**(3/2))) # creating fucntion to convert redshift z to look back time
@@ -62,17 +63,17 @@ Time=LookBack(Z) #convering redshifts to lookback times using funciton amde abov
 #IMF
 def IMF():
 	Masses=[]
+	Weights=[]
 	Mran=np.linspace(0.1,100,10000)
 	C=36354.560545987355
-	N= lambda M1, M2: np.ceil(C/(-1.35)*(M2**(-(1.35))-M1**(-(1.35))))
+	N= lambda M1, M2: C/(-1.35)*(M2**(-(1.35))-M1**(-(1.35)))
 	for i in range(1,len(Mran)):
-	    n=0
-	    while n<N(Mran[i-1],Mran[i]):
-	        Masses.append((Mran[i-1]+Mran[i])/2)
-	        n+=1
-	return Masses # returning IMF mass array
-MassArray=IMF() #Getting mass array from above function 
-plt.hist(MassArray)
+	    Masses.append((Mran[i-1]+Mran[i])/2)
+	    Weights.append(N(Mran[i-1],Mran[i]))
+	        
+	return Masses,Weights # returning IMF mass array
+MassArray,WeightArray=IMF() #Getting mass array from above function 
+plt.bar(MassArray,WeightArray)
 plt.yscale('log')
 plt.savefig('InitalMassFunction.png')
 '''
@@ -81,8 +82,8 @@ M["Masses"]=MassArray
 M.write('Masses1000.csv')
 '''
 Galaxy=[] #creating an empty galaxy
-for i in MassArray: #populating galazy with stars from IMF
-	Galaxy.append(Star(i)) #appending Galaxyarray with star objects
+for i in range(len(MassArray)): #populating galazy with stars from IMF
+	Galaxy.append(Star(MassArray[i],WeightArray[i])) #appending Galaxyarray with star objects
 #ISM loop
 MISM=[] #mass arrawy over time of the ISM
 cMISM=iMISM # current ISM mass set to inital mass of ISM for t=0
@@ -136,7 +137,7 @@ T['C']=C
 T['N']=N
 T['O']=O
 T['Fe']=Fe
-T.write("OutputBig.csv")
+T.write("OutputBig.csv",overwrite=True)
 plt.clf()
 plt.plot(T["Time"],T['ISM'],label='ISM')
 plt.savefig('ISMvTime.png',dpi=300)
@@ -150,7 +151,8 @@ for s in Galaxy:
 M=Table()
 M['StartMass']=MassArray
 M['EndMass']=endmass
-M.write('Masses.csv')
+M.write('Masses.csv',overwrite=True)
 plt.clf()
-plt.hist(np.abs(MassArray-endmass))
+Diff=[np.abs(MassArray[i]-endmass[i]) for i in range(len(MassArray)) ]
+plt.bar(Diff)
 plt.savefig('MassDiff.png')
