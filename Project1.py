@@ -5,6 +5,10 @@ from astropy.table import Table, Column
 #Variables
 H0= 1/13.8e9#Hubble constant needs to be in s^-1
 iMISM=10**12 #Iniital mass of ISM
+iMStar=10**12
+StarburstTime=1
+Starburst=False
+StarburstFrac=0.05
 #Star Class
 class Star():
 	'''
@@ -15,6 +19,7 @@ class Star():
 	def __init__(self, Mass,weight): # initaionliing the class with mass
 		self.mass=Mass #giving star class atribute mass
 		self.calc_rest() # profoming calc_rest fucntion definded below
+		self.TLife=1.1*self.TMS
 		self.Dead=False # Giving star atribute dead and initalizing it to false i.e. star is alive
 		self.Blown=False
 		self.Weight=weight
@@ -61,20 +66,21 @@ Z=np.linspace(0,12,1000) #creating array of reshifts staring at z=12 and going t
 Time=LookBack(Z) #convering redshifts to lookback times using funciton amde above
 #print(Time)
 #IMF
-def IMF():
+def IMF(Mass):
 	Masses=[]
 	Weights=[]
 	Mran=np.linspace(0.1,100,10000)
 	#Const=36354.560545987355
-	C= lambda Min, Max,total: total/(-0.35)*(Max**(-(0.35))-Min**(-(0.35)))
-	N= lambda M1, M2: C(0.1,100,10**12)/(-1.35) *(M2**(-(1.35))-M1**(-(1.35)))
+	C= lambda Min, Max,total: total/((-1.35)*(Max**(-(1.35))-Min**(-(1.35))))*5
+	N= lambda M1, M2: (C(0.1,100,Mass)/(-1.35)) *(M2**(-(1.35))-M1**(-(1.35)))
 	for i in range(1,len(Mran)):
-	    Masses.append((Mran[i-1]+Mran[i])/2)
+	    #Masses.append((Mran[i-1]+Mran[i])/2)
+	    Masses.append(Mran[i])
 	    Weights.append(N(Mran[i-1],Mran[i]))
 	        
 	return Masses,Weights # returning IMF mass array
 print('Creating IMF')
-MassArray,WeightArray=IMF() #Getting mass array from above function 
+MassArray,WeightArray=IMF(iMStar) #Getting mass array from above function 
 plt.bar(MassArray,WeightArray)
 plt.yscale('log')
 plt.savefig('InitalMassFunction.png')
@@ -83,7 +89,7 @@ M=Table()
 M["Masses"]=MassArray
 M.write('Masses1000.csv')
 '''
-print(' Populating Galaxy')
+print('Populating Galaxy')
 Galaxy=[] #creating an empty galaxy
 for i in range(len(MassArray)): #populating galazy with stars from IMF
 	Galaxy.append(Star(MassArray[i],WeightArray[i])) #appending Galaxyarray with star objects
@@ -107,7 +113,7 @@ for t in Time: # running the time
 		tempn=0 
 		tempo=0 
 		tempfe=0 # initaling temp for ISM to 0 if star doesnt die or wind
-		if s.TMS*1.1<t: #case for stars that are dead
+		if s.TLife<t: #case for stars that are dead
 			if s.Dead==False:
 				tempc1,tempn1,tempo1,tempfe1=s.Kill() # killing stars and getting contrubition to ISM
 			if s.Blown==False:
@@ -132,6 +138,19 @@ for t in Time: # running the time
 	MSTARS.append(tMSTARS) #appedning to mass of stars for time steps
 	spot=np.where(Time==t)
 	print(' '+str(spot[0][0])+'/'+str(len(Time)),end="\r")
+
+	#STarburst
+	if t>LookBack(12-StarburstTime) and Starburst==False:
+		print('\nSTARBURST!!!')
+		Masses1,Weights1=IMF(StarburstFrac*cMISM)
+		cMISM*=1-StarburstFrac
+		for m in range(len(Masses1)):
+			tStar=Star(Masses1[m],Weights1[m])
+			tStar.TMS+=t
+			tStar.TLife+=t
+			Galaxy.append(tStar)
+			Starburst=True
+
 print('\nCreating Output Table')
 T=Table()
 T['z']=Z
@@ -142,7 +161,7 @@ T['C']=C
 T['N']=N
 T['O']=O
 T['Fe']=Fe
-T.write("OutputBig.csv",overwrite=True)
+T.write("OutputBigSB.csv",overwrite=True)
 print('Creating Plots',end="\n")
 print(' Plotting ISM mass vs. z',end="\r")
 plt.clf()
@@ -152,8 +171,8 @@ plt.xlim([12.1,0])
 plt.yscale('log')
 plt.ylabel(r'ISM Mass [M$_{\odot}]$')
 plt.title('ISM Mass vs. Redshift')
-plt.savefig('ISMvz.png',dpi=300)
-print(' Plotting Stellar mass vs. z')
+plt.savefig('ISMvzSB.png',dpi=300)
+print('Plotting Stellar mass vs. z')
 plt.clf()
 plt.plot(T["z"][::-1],T['Stars'],label='Stars')
 plt.xlabel('Redshift')
@@ -161,7 +180,7 @@ plt.xlim([12.1,0])
 plt.yscale('log')
 plt.ylabel(r'Stellar Mass [M$_{\odot}]$')
 plt.title('Stellar Mass vs. Redshift')
-plt.savefig('Starsvz.png',dpi=300)
+plt.savefig('StarsvzSB.png',dpi=300)
 '''
 endmass=[]
 for s in Galaxy:
