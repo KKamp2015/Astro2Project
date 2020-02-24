@@ -6,7 +6,7 @@ from astropy.table import Table, Column
 H0= 1/13.8e9#Hubble constant needs to be in s^-1
 iMISM=10**12 #Iniital mass of ISM
 iMStar=10**12
-StarburstTime=1
+StarburstTime=5
 Starburst=False
 StarburstFrac=0.05
 #Star Class
@@ -30,20 +30,21 @@ class Star():
 	def Wind(self): # setting up wind procedure for stars past MS
 		if self.Blown==True: #checking for wind 
 			print("Star's wind already accounted for") # rpinting error message
-			return 0,0,0,0 # retunring 0 mass to ism
+			return 0,0,0,0,0,0 # retunring 0 mass to ism
 		else:
 			if self.mass>=3: # for stars greater than or equal to 3 solar masses
 				self.Blown==True
 				winda=0.015*self.mass*self.Weight
 				windb=0.01*self.mass*self.Weight
-				return winda,winda,windb,0.00
+				return 0,0,winda,winda,windb,0.00
 			else:
-				return 0,0,0,0
+				return 0,0,0,0,0,0
 
 	def Kill(self): # setting up Kill funciton
+		iMass=self.mass
 		if self.Dead==True: # checking if star has not already been killed
 			print("Star already Dead ", self.mass) # Printing warning
-			return 0,0,0,0 # retuening 0 mass to ism
+			return 0,0,0,0,0,0 # retuening 0 mass to ism
 		else:
 			if self.mass>8: # for massive stars
 				self.Dead=True #setting the dead atribute to true
@@ -51,19 +52,38 @@ class Star():
 					self.mass=1.4 # setting mass for reminent
 				else:
 					self.mass=3.0 # setting mass of remeninat for very massive stars.
-				return 0.1*self.Weight,0.1*self.Weight,0.1*self.Weight,0.3*self.Weight # returning masses of elemens given to ISM  [C,N,O,Fe]
+				rem=iMass-(0.1+0.1+0.1+0.3)
+				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.1*self.Weight,0.1*self.Weight,0.1*self.Weight,0.3*self.Weight # returning masses of elemens given to ISM  [H, He, C,N,O,Fe]
 			elif self.mass<=8: # for non massive stars
 				self.Dead=True# setting dead to True
 				self.mass=0
-				return 0.3*self.Weight,0.3*self.Weight,0.3*self.Weight,0.3*self.Weight# returning masses of elemens given to ISM  [C,N,O,Fe]
+				rem=iMass-(0.1+0.1+0.1+0.3)
+				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.3*self.Weight,0.3*self.Weight,0.3*self.Weight,0.3*self.Weight# returning masses of elemens given to ISM  [H,He, C,N,O,Fe]
 
 #Functions
 LookBack= lambda z: (2/(3*H0))*(1-(1/(1+z)**(3/2))) # creating fucntion to convert redshift z to look back time
 
+def StarBurst(Gal,f,ISM):
+	print('Pre H mass is: ',ISM)
+	test=ISM
+	Masses1,Weights1=IMF(f*ISM)
+	ISM=ISM-(f*ISM)
+	BurstMass=0
+	for m in range(len(Masses1)):
+		tStar=Star(Masses1[m],Weights1[m])
+		BurstMass+=(Masses1[m]*Weights1[m])
+		tStar.TMS+=t
+		tStar.TLife+=t
+		Gal.append(tStar)
+	print('Burst Mass is:',BurstMass)
+	print('Post H mass is : ',ISM)
+	print(test-BurstMass-ISM)
+	return ISM
 
 #time array
-Z=np.linspace(0,12,1000) #creating array of reshifts staring at z=12 and going to 0 with 1000 elements
+Z=np.linspace(0,12,1000) #creating array of reshifts staring at z=12 and going to 0 with 100000 elements
 Time=LookBack(Z) #convering redshifts to lookback times using funciton amde above
+#Time=np.abs(Time1-max(Time1))[::-1]
 #print(Time)
 #IMF
 def IMF(Mass):
@@ -71,7 +91,7 @@ def IMF(Mass):
 	Weights=[]
 	Mran=np.linspace(0.1,100,10000)
 	#Const=36354.560545987355
-	C= lambda Min, Max,total: total/((-1.35)*(Max**(-(1.35))-Min**(-(1.35))))*5
+	C= lambda Min, Max,total: (total*(-0.35))/((Max**(-(0.35))-Min**(-(0.35))))
 	N= lambda M1, M2: (C(0.1,100,Mass)/(-1.35)) *(M2**(-(1.35))-M1**(-(1.35)))
 	for i in range(1,len(Mran)):
 	    #Masses.append((Mran[i-1]+Mran[i])/2)
@@ -84,6 +104,8 @@ MassArray,WeightArray=IMF(iMStar) #Getting mass array from above function
 plt.bar(MassArray,WeightArray)
 plt.yscale('log')
 plt.savefig('InitalMassFunction.png')
+plt.close()
+totalmass=sum([a*b for a,b in zip(MassArray,WeightArray)])
 '''
 M=Table()
 M["Masses"]=MassArray
@@ -94,76 +116,98 @@ Galaxy=[] #creating an empty galaxy
 for i in range(len(MassArray)): #populating galazy with stars from IMF
 	Galaxy.append(Star(MassArray[i],WeightArray[i])) #appending Galaxyarray with star objects
 #ISM loop
-MISM=[] #mass arrawy over time of the ISM
+MISM=[iMISM] #mass arrawy over time of the ISM
 cMISM=iMISM # current ISM mass set to inital mass of ISM for t=0
-MSTARS=[] #cumluative mass array of Stars
-C=[]
-N=[]
-O=[]
-Fe=[]
+MSTARS=[totalmass] #cumluative mass array of Stars
+H=[0.76*iMISM]
+He=[0.24*iMISM]
+C=[0]
+N=[0]
+O=[0]
+Fe=[0]
+Tarr=[]
+Zarr=[]
+ctempH=0
+ctempHe=0
 ctempc=0
 ctempn=0
 ctempo=0
 ctempfe=0
 print('Running Simulation')
-for t in Time: # running the time
+for t in Time[1:]: # running the time
 	tMSTARS=0 #setting the timestep mass of stars to 0
+	if t>LookBack(12-StarburstTime) and Starburst==False:
+		print('\nSTARBURST!!!')
+		print('Start ISM Mass: ',sum([ctempH,ctempHe,ctempc,ctempn,ctempo,ctempfe]))
+		ctempH=StarBurst(Galaxy,StarburstFrac,ctempH)
+		print('End ISM Mass: ',sum([ctempH,ctempHe,ctempc,ctempn,ctempo,ctempfe]))
+		Tarr.append(t)
+		Zarr.append(Z[Time==t])
+		H.append(ctempH)
+		He.append(ctempHe)
+		C.append(ctempc)
+		N.append(ctempn)
+		O.append(ctempo)
+		Fe.append(ctempfe)
+		MISM.append(cMISM)# appedning ISM contribitions time steps
+		MSTARS.append(tMSTARS)
+		Starburst=True
 	for s in Galaxy: # running loop over all stars in galaxy
+		temph=0
+		temphe=0
 		tempc=0 
 		tempn=0 
 		tempo=0 
 		tempfe=0 # initaling temp for ISM to 0 if star doesnt die or wind
 		if s.TLife<t: #case for stars that are dead
 			if s.Dead==False:
-				tempc1,tempn1,tempo1,tempfe1=s.Kill() # killing stars and getting contrubition to ISM
+				temph1,temphe1,tempc1,tempn1,tempo1,tempfe1=s.Kill() # killing stars and getting contrubition to ISM
 			if s.Blown==False:
-				tempc2,tempn2,tempo2,tempfe2=s.Wind()
+				temph2,temphe2,tempc2,tempn2,tempo2,tempfe2=s.Wind()
+			temph=temph1+temph2
+			temphe=temphe1+temphe2
 			tempc=tempc1+tempc2
 			tempn=tempn1+tempn2
 			tempo=tempo1+tempo2
 			tempfe=tempfe1+tempfe2
 		elif s.TMS<t and s.Blown==False:
-			(tempc,tempn,tempo,tempfe)==s.Wind() # accounting for stars winds' contribtion to ISM
-		cMISM+=sum([tempc,tempn,tempo,tempfe]) #adding contrubuted masses to ism:
+			(temph,temphe,tempc,tempn,tempo,tempfe)==s.Wind() # accounting for stars winds' contribtion to ISM
+		cMISM+=sum([temph,temphe,tempc,tempn,tempo,tempfe]) #adding contrubuted masses to ism:
+		ctempH+=temph
+		ctempHe+=temphe
 		ctempc+=tempc
 		ctempn+=tempn
 		ctempo+=tempo
 		ctempfe+=tempfe
 		tMSTARS+=(s.mass*s.Weight)
+	H.append(ctempH)
+	He.append(ctempHe)
 	C.append(ctempc)
 	N.append(ctempn)
 	O.append(ctempo)
 	Fe.append(ctempfe)
+	Tarr.append(t)
+	Zarr.append(Z[Time==t])
 	MISM.append(cMISM)# appedning ISM contribitions time steps
 	MSTARS.append(tMSTARS) #appedning to mass of stars for time steps
 	spot=np.where(Time==t)
 	print(' '+str(spot[0][0])+'/'+str(len(Time)),end="\r")
 
-	#STarburst
-	if t>LookBack(12-StarburstTime) and Starburst==False:
-		print('\nSTARBURST!!!')
-		Masses1,Weights1=IMF(StarburstFrac*cMISM)
-		cMISM*=1-StarburstFrac
-		for m in range(len(Masses1)):
-			tStar=Star(Masses1[m],Weights1[m])
-			tStar.TMS+=t
-			tStar.TLife+=t
-			Galaxy.append(tStar)
-			Starburst=True
-
 print('\nCreating Output Table')
 T=Table()
-T['z']=Z
-T['Time']=Time
+T['z']=Zarr
+T['Time']=Tarr
 T['ISM']=MISM
 T['Stars']=MSTARS
+T['H']=H
+T['He']=He
 T['C']=C
 T['N']=N
 T['O']=O
 T['Fe']=Fe
 T.write("OutputBigSB.csv",overwrite=True)
 print('Creating Plots',end="\n")
-print(' Plotting ISM mass vs. z',end="\r")
+print('Plotting ISM mass vs. z',end="\r")
 plt.clf()
 plt.plot(T["z"][::-1],T['ISM'],label='ISM')
 plt.xlabel('Redshift')
@@ -181,6 +225,19 @@ plt.yscale('log')
 plt.ylabel(r'Stellar Mass [M$_{\odot}]$')
 plt.title('Stellar Mass vs. Redshift')
 plt.savefig('StarsvzSB.png',dpi=300)
+
+plt.plot(T["z"][::-1],T['HH'],label='Carbon')
+plt.plot(T["z"][::-1],T['He'],label='Carbon')
+plt.plot(T["z"][::-1],T['C'],label='Carbon')
+plt.plot(T["z"][::-1],T['N'],label='Carbon')
+plt.plot(T["z"][::-1],T['O'],label='Carbon')
+plt.plot(T["z"][::-1],T['Fe'],label='Carbon')
+plt.xlabel('Redshift')
+plt.xlim([12.1,0])
+plt.yscale('log')
+plt.ylabel(r'Element Mass [M$_{\odot}]$')
+plt.title('Elemental Mass Mass vs. Redshift')
+plt.savefig('ElementsvzSB.png',dpi=300)
 '''
 endmass=[]
 for s in Galaxy:
