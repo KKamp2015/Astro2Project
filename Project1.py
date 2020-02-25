@@ -8,7 +8,7 @@ iMISM=10**12 #Iniital mass of ISM
 iMStar=10**12
 StarburstTime=5
 Starburst=False
-StarburstFrac=0.05
+StarburstFrac=0.5
 #Star Class
 class Star():
 	'''
@@ -36,6 +36,7 @@ class Star():
 				self.Blown==True
 				winda=0.015*self.mass*self.Weight
 				windb=0.01*self.mass*self.Weight
+				self.mass=self.mass-(sum([0,0,winda,winda,windb,0.00])/self.Weight)
 				return 0,0,winda,winda,windb,0.00
 			else:
 				return 0,0,0,0,0,0
@@ -125,8 +126,8 @@ C=[0]
 N=[0]
 O=[0]
 Fe=[0]
-Tarr=[]
-Zarr=[]
+Tarr=[0]
+Zarr=[0]
 ctempH=0
 ctempHe=0
 ctempc=0
@@ -142,7 +143,7 @@ for t in Time[1:]: # running the time
 		ctempH=StarBurst(Galaxy,StarburstFrac,ctempH)
 		print('End ISM Mass: ',sum([ctempH,ctempHe,ctempc,ctempn,ctempo,ctempfe]))
 		Tarr.append(t)
-		Zarr.append(Z[Time==t])
+		Zarr.append(Z[Time==t][0])
 		H.append(ctempH)
 		He.append(ctempHe)
 		C.append(ctempc)
@@ -187,7 +188,7 @@ for t in Time[1:]: # running the time
 	O.append(ctempo)
 	Fe.append(ctempfe)
 	Tarr.append(t)
-	Zarr.append(Z[Time==t])
+	Zarr.append(Z[Time==t][0])
 	MISM.append(cMISM)# appedning ISM contribitions time steps
 	MSTARS.append(tMSTARS) #appedning to mass of stars for time steps
 	spot=np.where(Time==t)
@@ -209,10 +210,17 @@ T.write("OutputBigSB.csv",overwrite=True)
 print('Creating Plots',end="\n")
 print('Plotting ISM mass vs. z',end="\r")
 plt.clf()
-plt.plot(T["z"][::-1],T['ISM'],label='ISM')
+plt.plot(T["z"][::-1],T['ISM'],label='Total')
+plt.plot(T["z"][::-1],T['H'],label='Hydrogen')
+plt.plot(T["z"][::-1],T['He'],label='Helium')
+plt.plot(T["z"][::-1],T['C'],label='Carbon')
+plt.plot(T["z"][::-1],T['N'],label='Nitrogen')
+plt.plot(T["z"][::-1],T['O'],label='Oxygen')
+plt.plot(T["z"][::-1],T['Fe'],label='Iron')
 plt.xlabel('Redshift')
 plt.xlim([12.1,0])
 plt.yscale('log')
+plt.legend()
 plt.ylabel(r'ISM Mass [M$_{\odot}]$')
 plt.title('ISM Mass vs. Redshift')
 plt.savefig('ISMvzSB.png',dpi=300)
@@ -225,19 +233,8 @@ plt.yscale('log')
 plt.ylabel(r'Stellar Mass [M$_{\odot}]$')
 plt.title('Stellar Mass vs. Redshift')
 plt.savefig('StarsvzSB.png',dpi=300)
+plt.close()
 
-plt.plot(T["z"][::-1],T['HH'],label='Carbon')
-plt.plot(T["z"][::-1],T['He'],label='Carbon')
-plt.plot(T["z"][::-1],T['C'],label='Carbon')
-plt.plot(T["z"][::-1],T['N'],label='Carbon')
-plt.plot(T["z"][::-1],T['O'],label='Carbon')
-plt.plot(T["z"][::-1],T['Fe'],label='Carbon')
-plt.xlabel('Redshift')
-plt.xlim([12.1,0])
-plt.yscale('log')
-plt.ylabel(r'Element Mass [M$_{\odot}]$')
-plt.title('Elemental Mass Mass vs. Redshift')
-plt.savefig('ElementsvzSB.png',dpi=300)
 '''
 endmass=[]
 for s in Galaxy:
