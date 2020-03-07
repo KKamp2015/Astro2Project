@@ -1,1 +1,1 @@
-This code is nto complete and not comment well but it will git you guys started.
+This code is not complete and not comment well but it will git you guys started. You dont need to use a object but I just did to make things a little easier for me. you could do this entire thing with If statments and lists/arrays. This should get you guys a good start to see how to set up things.
