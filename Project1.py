@@ -53,12 +53,12 @@ class Star():
 					self.mass=1.4 # setting mass for reminent
 				else:
 					self.mass=3.0 # setting mass of remeninat for very massive stars.
-				rem=iMass-(0.1+0.1+0.1+0.3)
+				rem=iMass-(0.3+0.3+0.3+0.3)-self.mass
 				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.1*self.Weight,0.1*self.Weight,0.1*self.Weight,0.3*self.Weight # returning masses of elemens given to ISM  [H, He, C,N,O,Fe]
 			elif self.mass<=8: # for non massive stars
 				self.Dead=True# setting dead to True
 				self.mass=0
-				rem=iMass-(0.1+0.1+0.1+0.3)
+				rem=iMass-(0.3+0.3+0.3+0.3)-self.mass
 				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.3*self.Weight,0.3*self.Weight,0.3*self.Weight,0.3*self.Weight# returning masses of elemens given to ISM  [H,He, C,N,O,Fe]
 
 #Functions
@@ -68,6 +68,7 @@ def StarBurst(Gal,f,ISM):
 	print('Pre H mass is: ',ISM)
 	test=ISM
 	Masses1,Weights1=IMF(f*ISM)
+	print(Masses1[:10],Weights1[:10])
 	ISM=ISM-(f*ISM)
 	BurstMass=0
 	for m in range(len(Masses1)):
@@ -79,7 +80,7 @@ def StarBurst(Gal,f,ISM):
 	print('Burst Mass is:',BurstMass)
 	print('Post H mass is : ',ISM)
 	print(test-BurstMass-ISM)
-	return ISM
+	return ISM, Gal
 
 #time array
 Z=np.linspace(0,12,1000) #creating array of reshifts staring at z=12 and going to 0 with 100000 elements
@@ -140,7 +141,7 @@ for t in Time[1:]: # running the time
 	if t>LookBack(12-StarburstTime) and Starburst==False:
 		print('\nSTARBURST!!!')
 		print('Start ISM Mass: ',sum([ctempH,ctempHe,ctempc,ctempn,ctempo,ctempfe]))
-		ctempH=StarBurst(Galaxy,StarburstFrac,ctempH)
+		ctempH,Galaxy=StarBurst(Galaxy,StarburstFrac,ctempH)
 		print('End ISM Mass: ',sum([ctempH,ctempHe,ctempc,ctempn,ctempo,ctempfe]))
 		Tarr.append(t)
 		Zarr.append(Z[Time==t][0])
