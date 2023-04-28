@@ -2,12 +2,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
+import copy
 #Variables
 H0= 1/13.8e9#Hubble constant needs to be in s^-1
 iMISM=10**12 #Iniital mass of ISM
 iMStar=10**12
 StarburstTime=5
-Starburst=False
+Starburst=False                             #Here
 StarburstFrac=0.5
 #Star Class
 class Star():
@@ -42,7 +43,7 @@ class Star():
 				return 0,0,0,0,0,0
 
 	def Kill(self): # setting up Kill funciton
-		iMass=self.mass
+		iMass=copy.deepcopy(self.mass)
 		if self.Dead==True: # checking if star has not already been killed
 			print("Star already Dead ", self.mass) # Printing warning
 			return 0,0,0,0,0,0 # retuening 0 mass to ism
@@ -55,11 +56,15 @@ class Star():
 					self.mass=3.0 # setting mass of remeninat for very massive stars.
 				rem=iMass-(0.3+0.3+0.3+0.3)-self.mass
 				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.1*self.Weight,0.1*self.Weight,0.1*self.Weight,0.3*self.Weight # returning masses of elemens given to ISM  [H, He, C,N,O,Fe]
+			elif self.mass<=3:
+				self.Dead=True# setting dead to True
+				self.mass=0
+				return 0.76*iMass*self.Weight,0.24*iMass*self.Weight,0,0,0,0
 			elif self.mass<=8: # for non massive stars
 				self.Dead=True# setting dead to True
 				self.mass=0
-				rem=iMass-(0.3+0.3+0.3+0.3)-self.mass
-				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.3*self.Weight,0.3*self.Weight,0.3*self.Weight,0.3*self.Weight# returning masses of elemens given to ISM  [H,He, C,N,O,Fe]
+				rem=iMass-(0.05*3*iMass)
+				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.05*iMass*self.Weight,0.05*iMass*self.Weight,0.05*iMass*self.Weight,0# returning masses of elemens given to ISM  [H,He, C,N,O,Fe]
 
 #Functions
 LookBack= lambda z: (2/(3*H0))*(1-(1/(1+z)**(3/2))) # creating fucntion to convert redshift z to look back time
@@ -68,7 +73,6 @@ def StarBurst(Gal,f,ISM):
 	print('Pre H mass is: ',ISM)
 	test=ISM
 	Masses1,Weights1=IMF(f*ISM)
-	print(Masses1[:10],Weights1[:10])
 	ISM=ISM-(f*ISM)
 	BurstMass=0
 	for m in range(len(Masses1)):
@@ -79,7 +83,6 @@ def StarBurst(Gal,f,ISM):
 		Gal.append(tStar)
 	print('Burst Mass is:',BurstMass)
 	print('Post H mass is : ',ISM)
-	print(test-BurstMass-ISM)
 	return ISM, Gal
 
 #time array
@@ -89,16 +92,17 @@ Time=LookBack(Z) #convering redshifts to lookback times using funciton amde abov
 #print(Time)
 #IMF
 def IMF(Mass):
+	Mass=np.abs(Mass)
 	Masses=[]
 	Weights=[]
 	Mran=np.linspace(0.1,100,10000)
 	#Const=36354.560545987355
-	C= lambda Min, Max,total: (total*(-0.35))/((Max**(-(0.35))-Min**(-(0.35))))
-	N= lambda M1, M2: (C(0.1,100,Mass)/(-1.35)) *(M2**(-(1.35))-M1**(-(1.35)))
+	C= 3.35*Mass/(100**1.35)/20
+	N= lambda M1: C*M1**(-(1.35))
 	for i in range(1,len(Mran)):
 	    #Masses.append((Mran[i-1]+Mran[i])/2)
 	    Masses.append(Mran[i])
-	    Weights.append(N(Mran[i-1],Mran[i]))
+	    Weights.append(N(Mran[i]))
 	        
 	return Masses,Weights # returning IMF mass array
 print('Creating IMF')
@@ -207,7 +211,7 @@ T['C']=C
 T['N']=N
 T['O']=O
 T['Fe']=Fe
-T.write("OutputBigSB.csv",overwrite=True)
+T.write("OutputBigSB.csv",overwrite=True)                               #Here
 print('Creating Plots',end="\n")
 print('Plotting ISM mass vs. z',end="\r")
 plt.clf()
@@ -224,7 +228,7 @@ plt.yscale('log')
 plt.legend()
 plt.ylabel(r'ISM Mass [M$_{\odot}]$')
 plt.title('ISM Mass vs. Redshift')
-plt.savefig('ISMvzSB.png',dpi=300)
+plt.savefig('ISMvzSB.png',dpi=300)                               #Here
 print('Plotting Stellar mass vs. z')
 plt.clf()
 plt.plot(T["z"][::-1],T['Stars'],label='Stars')
@@ -233,7 +237,7 @@ plt.xlim([12.1,0])
 plt.yscale('log')
 plt.ylabel(r'Stellar Mass [M$_{\odot}]$')
 plt.title('Stellar Mass vs. Redshift')
-plt.savefig('StarsvzSB.png',dpi=300)
+plt.savefig('StarsvzSB.png',dpi=300)                               #Here
 plt.close()
 
 '''
