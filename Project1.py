@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table, Column
 import copy
+import sys
 #Variables
 H0= 1/13.8e9#Hubble constant needs to be in s^-1
 iMISM=10**12 #Iniital mass of ISM
@@ -25,6 +26,7 @@ class Star():
 		self.Dead=False # Giving star atribute dead and initalizing it to false i.e. star is alive
 		self.Blown=False
 		self.Weight=weight
+		self.SNIa=False
 	
 	def calc_rest(self): #defining calc_rest 
 		self.TMS=10**10 *(self.mass)**(-3.5) # calculating the time on the main sequnce 
@@ -46,29 +48,43 @@ class Star():
 
 	def Kill(self): # setting up Kill funciton
 		iMass=copy.deepcopy(self.mass)
+		rem=0
+		H=0
+		He=0
+		He2=0
 		if self.Dead==True: # checking if star has not already been killed
 			print("Star already Dead ", self.mass) # Printing warning
 			return 0,0,0,0,0,0 # retuening 0 mass to ism
 		else:
-			if self.mass>8: # for massive stars
+			if self.StartMass>=8: # for massive stars
 				self.Dead=True #setting the dead atribute to true
-				if self.mass<50: # for less massive set mass for neutron star as reminent
+				if self.StartMass<50: # for less massive set mass for neutron star as reminent
 					self.mass=1.4 # setting mass for reminent
 				else:
 					self.mass=3.0 # setting mass of remeninat for very massive stars.
 				rem=iMass-(0.1+0.1+0.1+0.03)-self.mass
 				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.1*self.Weight,0.1*self.Weight,0.1*self.Weight,0.03*self.Weight # returning masses of elemens given to ISM  [H, He, C,N,O,Fe]
-			elif self.mass<=3:
+			elif self.StartMass<=3:
 				self.Dead=True# setting dead to True
-				self.mass=0
-				return 0.76*iMass*self.Weight,0.24*iMass*self.Weight,0,0,0,0
-			elif self.mass<=8: # for non massive stars
+				self.mass=0.6
+				H=(self.StartMass-self.mass) *0.76
+				He=(self.StartMass-self.mass) *0.24
+				excess=0.000
+				excess=(H+He+self.mass-self.StartMass)
+				return H*self.Weight,He*self.Weight+excess*self.Weight,0,0,0,0
+			elif self.StartMass<=8: # for non massive stars
 				self.Dead=True# setting dead to True
-				self.mass=0
-				rem=iMass-(0.05*3*iMass)
-				if rem<0:
-					print(rem)
-				return 0.76*rem*self.Weight,0.24*rem*self.Weight,0.05*iMass*self.Weight,0.05*iMass*self.Weight,0.05*iMass*self.Weight,0# returning masses of elemens given to ISM  [H,He, C,N,O,Fe]
+				self.mass=0.6
+				H=(s.StartMass-self.mass) *0.76
+				He=(s.StartMass-self.mass) -H
+				if (H+He+self.mass)-self.StartMass !=0:
+					dale=0
+					#print('\nMed')
+					#print(self.StartMass)
+					#print((H+He)-self.StartMass)
+					#sys.exit()
+				return H*self.Weight,He*self.Weight,0,0,0,0# returning masses of elemens given to ISM  [H,He, C,N,O,Fe]
+
 #Functions
 LookBack= lambda z: (2/(3*H0))*(1-(1/(1+z)**(3/2))) # creating fucntion to convert redshift z to look back time
 
@@ -100,12 +116,13 @@ def IMF(Mass):
 	Weights=[]
 	Mran=np.linspace(0.1,100,10000)
 	#Const=36354.560545987355
-	C= 3.35*Mass/(100**1.35)/20
+	C= 3.35*Mass/(100**1.35)/10
 	N= lambda M1: C*M1**(-(1.35))
 	for i in range(1,len(Mran)):
 	    #Masses.append((Mran[i-1]+Mran[i])/2)
 	    Masses.append(Mran[i])
 	    Weights.append(N(Mran[i]))
+	#print(Masses)
 	return Masses,Weights # returning IMF mass array
 print('Creating IMF')
 MassArray,WeightArray=IMF(iMStar) #Getting mass array from above function 
@@ -181,11 +198,10 @@ for t in Time[1:]: # running the time
 		tempn2=0 
 		tempo2=0 
 		tempfe2=0 # initaling temp for ISM to 0 if star doesnt die or wind
+		tempISM=0
 		if s.TLife<=t and s.Dead==False: #case for stars that are dead
 			if s.Dead==False:
 				temph1,temphe1,tempc1,tempn1,tempo1,tempfe1=s.Kill() # killing stars and getting contrubition to ISM
-				#if (iMass*s.Weight-sum([temph1,temphe1,tempc1,tempn1,tempo1,tempfe1])-s.mass*s.Weight)<0:
-					#print(iMass,t)
 			if s.Blown==False:
 				temph2,temphe2,tempc2,tempn2,tempo2,tempfe2=s.Wind()
 			temph=temph1+temph2
@@ -194,9 +210,19 @@ for t in Time[1:]: # running the time
 			tempn=tempn1+tempn2
 			tempo=tempo1+tempo2
 			tempfe=tempfe1+tempfe2
+			tempISM=sum([temph,temphe,tempc,tempn,tempo,tempfe])
 		elif s.TMS<=t and s.Blown==False:
 				(temph,temphe,tempc,tempn,tempo,tempfe)==s.Wind() # accounting for stars winds' contribtion to ISM
-		cMISM+=sum([temph,temphe,tempc,tempn,tempo,tempfe]) #adding contrubuted masses to ism:
+				tempISM=sum([temph,temphe,tempc,tempn,tempo,tempfe])
+		if s.StartMass<=8 and s.StartMass>=3 and s.TLife+2e8<t and s.SNIa==False: #SNe Ia
+			s.SNIa=True
+			s.mass=0
+			tempc+=0.1*s.Weight*10**-5
+			tempn+=0.1*s.Weight*10**-5
+			tempo+=0.1*s.Weight*10**-5
+			tempfe+=0.3*s.Weight*10**-5
+			tempISM=sum([temph,temphe,tempc,tempn,tempo,tempfe])
+		cMISM+=tempISM #adding contrubuted masses to ism:
 		ctempH+=temph
 		ctempHe+=temphe
 		ctempc+=tempc
@@ -217,7 +243,6 @@ for t in Time[1:]: # running the time
 	MSTARS.append(tMSTARS) #appedning to mass of stars for time steps
 	spot=np.where(Time==t)
 	print(' '+str(spot[0][0])+'/'+str(len(Time)),end="\r")
-
 print('\nCreating Output Table')
 T=Table()
 T['z']=Zarr
