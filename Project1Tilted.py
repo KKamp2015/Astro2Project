@@ -106,7 +106,7 @@ def StarBurst(Gal,f,ISM):
 	return ISM, Gal
 
 #time array
-Z=np.linspace(0,25,1000) #creating array of reshifts staring at z=12 and going to 0 with 100000 elements
+Z=np.linspace(0,25,10000) #creating array of reshifts staring at z=12 and going to 0 with 100000 elements
 Time=LookBack(Z) #convering redshifts to lookback times using funciton amde above
 #Time=np.abs(Time1-max(Time1))[::-1]
 #print(Time)
